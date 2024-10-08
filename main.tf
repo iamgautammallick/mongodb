@@ -1,212 +1,134 @@
-# Terraform block
-terraform {
-  required_version = ">= 1.0.0"
-
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "~> 4.0"
-    }
-    tls = {
-      source  = "hashicorp/tls"
-      version = "~> 4.0"
-    }
-    local = {
-      source  = "hashicorp/local"
-      version = "~> 2.0"
-    }
-  }
-}
-
-# AWS Provider configuration
 provider "aws" {
-  region = "us-east-1"  # North Virginia
-}
-
-# Generate an SSH Key Pair
-resource "tls_private_key" "terraform_key" {
-  algorithm = "RSA"
-  rsa_bits  = 4096
-}
-
-# Save the Private Key Locally
-resource "local_file" "private_key" {
-  content  = tls_private_key.terraform_key.private_key_pem
-  filename = "${path.module}/t2_medium.pem"
-
-  # Ensure the private key file is secure and not tracked in version control.
-  lifecycle {
-    ignore_changes = [content]
+    region = "us-east-1"
   }
-}
-
-# Register the Public Key with AWS
-resource "aws_key_pair" "terraform_key" {
-  key_name   = "t2.medium"
-  public_key = tls_private_key.terraform_key.public_key_openssh
-
-  tags = {
-    Name = "t2.medium-key"
+  
+  resource "tls_private_key" "generated_key" {
+    algorithm = "RSA"
+    rsa_bits  = 2048
   }
-}
-
-# Create a VPC
-resource "aws_vpc" "main" {
-  cidr_block           = "10.0.0.0/16"
-  enable_dns_support   = true
-  enable_dns_hostnames = true
-
-  tags = {
-    Name = "terraform-vpc"
+  
+  resource "local_file" "private_key" {
+    content  = tls_private_key.generated_key.private_key_pem
+    filename = "./ec2-key.pem"
   }
-}
-
-# Create an Internet Gateway
-resource "aws_internet_gateway" "gw" {
-  vpc_id = aws_vpc.main.id
-
-  tags = {
-    Name = "terraform-igw"
+  
+  variable "control_plane_count" {
+    description = "Number of control plane instances to create"
+    type        = number
+    default     = 1
   }
-}
-
-# Create a Public Subnet
-resource "aws_subnet" "public" {
-  vpc_id                  = aws_vpc.main.id
-  cidr_block              = "10.0.1.0/24"
-  map_public_ip_on_launch = true
-  availability_zone       = "us-east-1a"
-
-  tags = {
-    Name = "terraform-public-subnet"
+  
+  variable "worker_node_count" {
+    description = "Number of worker node instances to create"
+    type        = number
+    default     = 1
   }
-}
-
-# Create a Route Table
-resource "aws_route_table" "public" {
-  vpc_id = aws_vpc.main.id
-
-  route {
-    cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.gw.id
+  
+  resource "aws_key_pair" "generated_key" {
+    key_name   = "ec2-key"
+    public_key = tls_private_key.generated_key.public_key_openssh
   }
-
-  tags = {
-    Name = "terraform-public-route-table"
+  
+  resource "aws_instance" "control_plane" {
+    count         = var.control_plane_count
+    ami           = "ami-005fc0f236362e99f"  # Using the specified AMI
+    instance_type = "t2.medium"
+    key_name      = aws_key_pair.generated_key.key_name
+  
+    tags = {
+      Name = "control-plane-${count.index + 1}"
+    }
+  
+    subnet_id = aws_subnet.public_subnet.id
+    vpc_security_group_ids = [aws_security_group.allow_ssh.id]
   }
-}
-
-# Associate Route Table with Subnet
-resource "aws_route_table_association" "public_assoc" {
-  subnet_id      = aws_subnet.public.id
-  route_table_id = aws_route_table.public.id
-}
-
-# Create a Security Group to Allow SSH
-resource "aws_security_group" "allow_ssh" {
-  name        = "allow_ssh"
-  description = "Allow inbound SSH traffic"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "SSH from anywhere"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # For enhanced security, restrict to your IP
+  
+  resource "aws_instance" "worker_node" {
+    count         = var.worker_node_count
+    ami           = "ami-005fc0f236362e99f"  # Using the specified AMI
+    instance_type = "t2.medium"
+    key_name      = aws_key_pair.generated_key.key_name
+  
+    tags = {
+      Name = "worker-node-${count.index + 1}"
+    }
+  
+    subnet_id = aws_subnet.public_subnet.id
+    vpc_security_group_ids = [aws_security_group.allow_ssh.id]
   }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  
+  # Output the Public IPs of the Control Plane Instances
+  output "control_plane_public_ips" {
+    description = "Public IPs of the control plane instances"
+    value       = aws_instance.control_plane[*].public_ip
   }
-
-  tags = {
-    Name = "allow_ssh_sg"
+  
+  # Output the Public IPs of the Worker Node Instances
+  output "worker_node_public_ips" {
+    description = "Public IPs of the worker node instances"
+    value       = aws_instance.worker_node[*].public_ip
   }
-}
-
-# Create a Security Group for HTTP Access
-resource "aws_security_group" "allow_http" {
-  name        = "allow_http"
-  description = "Allow inbound HTTP traffic"
-  vpc_id      = aws_vpc.main.id
-
-  ingress {
-    description = "HTTP from anywhere"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+  
+  resource "aws_vpc" "main" {
+    cidr_block           = "10.0.0.0/16"
+    enable_dns_support   = true
+    enable_dns_hostnames = true
   }
-
-  egress {
-    description = "Allow all outbound traffic"
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+  
+  resource "aws_subnet" "public_subnet" {
+    vpc_id                  = aws_vpc.main.id
+    cidr_block              = "10.0.1.0/24"
+    availability_zone       = "us-east-1a"  # Update as needed
+    map_public_ip_on_launch = true
   }
-
-  tags = {
-    Name = "allow_http_sg"
+  
+  resource "aws_internet_gateway" "gw" {
+    vpc_id = aws_vpc.main.id
   }
-}
-
-# Launch the Control Plane EC2 Instance with t2.medium
-resource "aws_instance" "control_plane" {
-  ami                         = "ami-0583d8c7a9c35822c"  # Replace with your preferred AMI
-  instance_type               = "t2.medium"
-  subnet_id                   = aws_subnet.public.id
-  key_name                    = aws_key_pair.terraform_key.key_name
-  vpc_security_group_ids      = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_http.id
-  ]
-  associate_public_ip_address = true
-
-  depends_on = [
-    aws_security_group.allow_ssh,
-    aws_security_group.allow_http
-  ]
-
-  tags = {
-    Name = "control-plane"
+  
+  resource "aws_route_table" "public" {
+    vpc_id = aws_vpc.main.id
+  
+    route {
+      cidr_block = "0.0.0.0/0"
+      gateway_id = aws_internet_gateway.gw.id
+    }
   }
-}
-
-# Launch the Worker Node 1 EC2 Instance with t2.medium
-resource "aws_instance" "worker_node1" {
-  ami                         = "ami-0583d8c7a9c35822c"  # Replace with your preferred AMI
-  instance_type               = "t2.medium"
-  subnet_id                   = aws_subnet.public.id
-  key_name                    = aws_key_pair.terraform_key.key_name
-  vpc_security_group_ids      = [
-    aws_security_group.allow_ssh.id,
-    aws_security_group.allow_http.id
-  ]
-  associate_public_ip_address = true
-
-  depends_on = [
-    aws_security_group.allow_ssh,
-    aws_security_group.allow_http
-  ]
-
-  tags = {
-    Name = "worker-node1"
+  
+  resource "aws_route_table_association" "public_assoc" {
+    subnet_id      = aws_subnet.public_subnet.id
+    route_table_id = aws_route_table.public.id
   }
-}
-
-# Output the Public IPs of the Instances
-output "control_plane_public_ip" {
-  description = "Public IP of the control-plane instance"
-  value       = aws_instance.control_plane.public_ip
-}
-
-output "worker_node1_public_ip" {
-  description = "Public IP of the worker-node1 instance"
-  value       = aws_instance.worker_node1.public_ip
-}
+  
+  resource "aws_security_group" "allow_ssh" {
+    name_prefix = "allow_ssh"
+    vpc_id      = aws_vpc.main.id
+  
+    ingress {
+      from_port   = 22
+      to_port     = 22
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  
+    ingress {
+      from_port   = 6443
+      to_port     = 6443
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  
+    ingress {
+      from_port   = 30000
+      to_port     = 32767
+      protocol    = "tcp"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  
+    egress {
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
