@@ -1,95 +1,91 @@
-☁️💻 EC2 🏗️ with 🏗️Terraform
+# Multi-Cluster Setup with AWS EC2 Using Terraform
 
-This 🏗️Terraform project provisions ☁️AWS infrastructure including a 🌐Virtual Private Cloud (VPC), 🛤️subnets, 🔒security groups, and two EC2 🖥️ instances named control-plane and worker-node1. The 🖥️ instances are configured with 🔒SSH and 🌍HTTP access enabled, and an SSH 🔑 key pair is generated and stored locally for 🔒 secure remote access.
+## Overview
+This Terraform project allows you to create a Kubernetes-like multi-cluster setup on AWS EC2 instances. You can easily specify the number of control plane and worker nodes, which makes it easy to set up and manage multiple clusters by adjusting the number of instances.
 
-🌟 Features
+## Prerequisites
+- Terraform installed on your local machine.
+- AWS credentials configured with sufficient permissions to create VPC, Subnet, EC2 instances, Security Groups, etc.
+- SSH key-pair for accessing the EC2 instances.
 
-☁️AWS EC2 🖥️ Instances: Creates two t2.medium instances named control-plane and worker-node1.
+## Features
+- Automated generation of a key pair for secure SSH access to EC2 instances.
+- Configurable number of control plane and worker node instances.
+- Custom VPC, Subnet, and Security Group setup to manage the network infrastructure.
+- Outputs public IPs of the control plane and worker nodes for easy access.
 
-🔑SSH Key Pair: Generates a secure SSH key pair for accessing the EC2 🖥️ instances.
+## Setup
+1. **Clone the Repository**
+   ```sh
+   https://github.com/iamgautammallick/mongodb.git
+   cd mongodb
+   ```
 
-🌐VPC and 🛤️Subnet: Creates a new VPC with a public 🛤️ subnet.
+2. **Edit Variables (Optional)**
+   You can update the default variables to configure the number of control plane and worker node instances.
+   ```hcl
+   variable "control_plane_count" {
+     description = "Number of control plane instances to create"
+     type        = number
+     default     = 1  # Update as needed
+   }
 
-🔒Security Groups: Configures security groups to allow inbound 🔒SSH and 🌍HTTP traffic.
+   variable "worker_node_count" {
+     description = "Number of worker node instances to create"
+     type        = number
+     default     = 1  # Update as needed
+   }
+   ```
 
-📋 Prerequisites
+3. **Initialize Terraform**
+   Run the following command to initialize Terraform and download the necessary providers.
+   ```sh
+   terraform init
+   ```
 
-🏗️Terraform v1.0.0 or higher: Install 🏗️Terraform by following the instructions here.
+4. **Apply Configuration**
+   Run the command below to create the infrastructure. You will be prompted to confirm before Terraform makes any changes.
+   ```sh
+   terraform apply
+   ```
+   Note: You can use the `-var` flag to override default values:
+   ```sh
+   terraform apply -var="control_plane_count=3" -var="worker_node_count=5"
+   ```
 
-☁️AWS Account: Ensure you have ☁️AWS credentials configured. You can set them up using the AWS CLI.
+5. **Access the Instances**
+   After the infrastructure is created, Terraform will output the public IP addresses of the control plane and worker nodes.
+   ```
+   control_plane_public_ips = ["<control-plane-ip>", ...]
+   worker_node_public_ips = ["<worker-node-ip>", ...]
+   ```
+   Use these IPs to SSH into the instances. For example:
+   ```sh
+   ssh -i ./ec2-key.pem ec2-user@<control-plane-ip>
+   ```
 
-IAM 👤 User with EC2 Access: Make sure the IAM 👤 user has permissions to create EC2 🖥️ instances, 🌐VPCs, 🛤️subnets, 🔒security groups, and 🔑key pairs.
+## Network Configuration
+The setup includes a VPC, public subnet, internet gateway, and security groups:
+- **VPC**: Custom VPC for network isolation.
+- **Subnet**: A public subnet with IPs assigned on instance launch.
+- **Security Groups**: Allows SSH (port 22) and Kubernetes-related ports (6443 for API server, 30000-32767 for NodePort services).
 
-🛠️ Usage
+## Multi-Cluster Setup
+You can set up multiple clusters by adjusting the number of control plane and worker node instances using the `control_plane_count` and `worker_node_count` variables. Each instance can act as an independent node in a Kubernetes cluster. For example, by setting `control_plane_count` to `3` and `worker_node_count` to `5`, you can create a setup suitable for managing a highly available multi-cluster environment.
 
-1. 🌀 Clone the Repository
+## Clean Up
+To destroy all resources created by this project and avoid incurring charges:
+```sh
+terraform destroy
+```
 
-2. ⚙️ Initialize 🏗️Terraform
+## Notes
+- The AMI used (`ami-005fc0f236362e99f`) is for `us-east-1`. You may need to update the AMI ID if deploying in a different region.
+- The generated key (`ec2-key.pem`) is stored locally for accessing the instances.
 
-Run the following command to initialize 🏗️Terraform, which will download necessary provider plugins:
+## Contributing
+Feel free to open an issue or submit a pull request if you have suggestions or improvements.
 
-3. 👀 Review the Plan
+## License
+This project is licensed under the MIT License.
 
-To see the list of resources that will be created, execute:
-
-4. 🚀 Apply the Configuration
-
-To create the resources, run:
-
-🏗️Terraform will prompt you to confirm the action. Type yes to proceed.
-
-5. 🔑 Accessing the EC2 🖥️ Instances
-
-After the resources are created, you can use the generated private 🔑 key (t2_medium.pem) to SSH into the 🖥️ instances.
-
-Replace <CONTROL_PLANE_PUBLIC_IP> with the public IP address provided by the 🏗️Terraform output.
-
-6. 🗑️ Destroy the Infrastructure
-
-If you no longer need the resources, you can destroy them to avoid incurring costs:
-
-Confirm the action by typing yes when prompted.
-
-🏗️ Resources Created
-
-🌐VPC: A new VPC with CIDR block 10.0.0.0/16.
-
-🛤️Subnet: A public 🛤️ subnet with CIDR block 10.0.1.0/24.
-
-🌍Internet Gateway: To enable internet access for resources within the 🌐VPC.
-
-🛤️Route Table: A 🛤️ route table associated with the public 🛤️ subnet.
-
-🔒Security Groups:
-
-🔒SSH Access: Allows inbound SSH traffic (port 22).
-
-🌍HTTP Access: Allows inbound HTTP traffic (port 80).
-
-EC2 🖥️ Instances:
-
-control-plane: t2.medium instance.
-
-worker-node1: t2.medium instance.
-
-🔑SSH Key Pair: Generated SSH key pair (t2_medium.pem).
-
-⚠️ Important Notes
-
-🔒Security: The 🔒security group allows inbound SSH and 🌍HTTP access from any IP (0.0.0.0/0). For better security, restrict access to specific IP addresses.
-
-🔑 Key File Security: Ensure that the private key (t2_medium.pem) is stored securely and has appropriate file permissions (chmod 400).
-
-💰 AWS Costs: Be mindful of ☁️AWS costs when running EC2 🖥️ instances. Destroy the resources (terraform destroy) when they are no longer needed.
-
-📜 License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-🤝 Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request for improvements or bug fixes.
-
-📞 Contact
-
-If you have any questions, feel free to reach out to the repository owner.
