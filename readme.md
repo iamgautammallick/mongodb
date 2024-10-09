@@ -18,8 +18,8 @@ This Terraform project allows you to create a Kubernetes-like multi-cluster setu
 ## Setup
 1. **Clone the Repository**
    ```sh
-   git clone https://github.com/yourusername/multi-cluster-setup
-   cd multi-cluster-setup
+   git clone https://github.com/yourusername/mongodb
+   cd mongodb
    ```
 
 2. **Edit Variables (Optional)**
