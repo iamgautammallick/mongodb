@@ -31,7 +31,7 @@ provider "aws" {
   
   resource "aws_instance" "control_plane" {
     count         = var.control_plane_count
-    ami           = "ami-005fc0f236362e99f"  # Using the specified AMI
+    ami           = "ami-005fc0f236362e99f"  # Using the Ubuntu 22.04 specified AMI
     instance_type = "t2.medium"
     key_name      = aws_key_pair.generated_key.key_name
   
@@ -45,7 +45,7 @@ provider "aws" {
   
   resource "aws_instance" "worker_node" {
     count         = var.worker_node_count
-    ami           = "ami-005fc0f236362e99f"  # Using the specified AMI
+    ami           = "ami-005fc0f236362e99f"  # Using the Ubuntu 22.04 specified AMI
     instance_type = "t2.medium"
     key_name      = aws_key_pair.generated_key.key_name
   
