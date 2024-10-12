@@ -71,8 +71,6 @@ The setup includes a VPC, public subnet, internet gateway, and security groups:
 - **Subnet**: A public subnet with IPs assigned on instance launch.
 - **Security Groups**: Allows SSH (port 22) and Kubernetes-related ports (6443 for API server, 30000-32767 for NodePort services).
 
-Apologies for missing that part. Here’s the complete, revised section, including the missing details and explanations:
-
 ---
 
 # Kubernetes Installation Guide on Ubuntu 22.04
