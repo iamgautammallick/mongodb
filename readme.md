@@ -71,6 +71,8 @@ The setup includes a VPC, public subnet, internet gateway, and security groups:
 - **Subnet**: A public subnet with IPs assigned on instance launch.
 - **Security Groups**: Allows SSH (port 22) and Kubernetes-related ports (6443 for API server, 30000-32767 for NodePort services).
 
+Apologies for missing that part. Here’s the complete, revised section, including the missing details and explanations:
+
 ---
 
 # Kubernetes Installation Guide on Ubuntu 22.04
@@ -207,7 +209,40 @@ To install Kubernetes, add its repository to your APT sources and install the ne
      ```
      - **Purpose**: Prevents swap from reactivating on reboot.
 
-sudo sysctl --system
+2. **Load Required Modules**:
+   Edit the containerd configuration file:
+   ```bash
+   sudo vi /etc/modules-load.d/containerd.conf
+   ```
+   - **Add**:
+     ```
+     overlay
+     br_netfilter
+     ```
+   - **Purpose**: Enables necessary modules for container networking.
+
+3. **Load the Modules**:
+   ```bash
+   sudo modprobe overlay
+   sudo modprobe br_netfilter
+   ```
+
+4. **Configure Network Settings**:
+   ```bash
+   sudo vi /etc/sysctl.d/kubernetes.conf
+   ```
+   - **Add**:
+     ```
+     net.bridge.bridge-nf-call-ip6tables = 1
+     net.bridge.bridge-nf-call-iptables = 1
+     net.ipv4.ip_forward = 1
+     ```
+   - **Purpose**: Configures system network settings for Kubernetes.
+
+5. **Reload the Configuration**:
+   ```bash
+   sudo sysctl --system
+   ```
 
 ### Initialize the Cluster on the Master Node
 
