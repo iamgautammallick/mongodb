@@ -315,4 +315,4 @@ By following these steps, you have successfully installed and configured a Kuber
 ---
 These steps should be performed on each node to successfully set up a Kubernetes cluster. Ensure that each step is followed carefully, as misconfigurations can lead to issues in the cluster.
 
-Author: Gautam Mallick
+Author: OpenAI+Gautam Mallick
