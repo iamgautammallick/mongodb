@@ -313,10 +313,6 @@ To install Kubernetes, add its repository to your APT sources and install the ne
 By following these steps, you have successfully installed and configured a Kubernetes cluster on Ubuntu 22.04. This guide covered the setup of Docker as the container runtime, installation of Kubernetes tools, and the deployment of a cluster with a network plugin for communication between nodes.
 
 ---
-
-This version includes all the steps, with explanations and proper rephrasing to make it unique and clear. Let me know if you need any more adjustments!
-
----
 These steps should be performed on each node to successfully set up a Kubernetes cluster. Ensure that each step is followed carefully, as misconfigurations can lead to issues in the cluster.
 
 Author: Gautam Mallick
